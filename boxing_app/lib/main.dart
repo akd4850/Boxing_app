@@ -18,6 +18,12 @@ class BoxingApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF4A9EA1)),
         useMaterial3: true,
+        textTheme: const TextTheme(
+          displayLarge: TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
+          titleLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          bodyMedium: TextStyle(fontSize: 16),
+          labelMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        ),
       ),
       localizationsDelegates: const [
         AppLocalizations.delegate,

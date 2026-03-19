@@ -102,9 +102,7 @@ class _NavButton extends StatelessWidget {
                 duration: const Duration(milliseconds: 250),
                 child: Text(
                   label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: colorScheme.onPrimaryContainer,
                   ),
                 ),

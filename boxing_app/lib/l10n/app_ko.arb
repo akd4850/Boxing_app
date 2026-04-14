@@ -10,6 +10,7 @@
   "reset": "리셋",
   "timerSetting": "운동시간 설정",
   "savePreset": "프리셋 저장하기",
+  "addPreset": "프리셋 추가하기",
   "loadPreset": "프리셋 불러오기",
   "roundLabel": "라운드",
   "exerciseTime": "운동시간",
@@ -17,10 +18,13 @@
   "minute": "분",
   "second": "초",
   "waitTime": "대기시간",
+  "statusIdle": "운동 전",
   "statusReady": "대기 중",
   "statusExercise": "운동 중",
   "statusRest": "휴식 중",
   "statusFinished": "완료",
   "cancel": "취소",
-  "confirm": "확인"
+  "confirm": "확인",
+  "presetNameHint": "프리셋 이름 입력",
+  "currentPreset": "현재 프리셋"
 }

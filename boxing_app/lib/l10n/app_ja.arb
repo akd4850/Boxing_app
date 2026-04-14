@@ -10,6 +10,7 @@
   "reset": "リセット",
   "timerSetting": "運動時間設定",
   "savePreset": "プリセット保存",
+  "addPreset": "プリセット追加",
   "loadPreset": "プリセット読み込み",
   "roundLabel": "ラウンド",
   "exerciseTime": "運動時間",
@@ -17,10 +18,13 @@
   "minute": "分",
   "second": "秒",
   "waitTime": "待機時間",
+  "statusIdle": "運動前",
   "statusReady": "準備中",
   "statusExercise": "運動中",
   "statusRest": "休憩中",
   "statusFinished": "完了",
   "cancel": "キャンセル",
-  "confirm": "確認"
+  "confirm": "確認",
+  "presetNameHint": "プリセット名を入力",
+  "currentPreset": "現在のプリセット"
 }

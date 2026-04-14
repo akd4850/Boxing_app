@@ -10,6 +10,7 @@
   "reset": "Reset",
   "timerSetting": "Timer Setting",
   "savePreset": "Save Preset",
+  "addPreset": "Add Preset",
   "loadPreset": "Load Preset",
   "roundLabel": "Rounds",
   "exerciseTime": "Exercise",
@@ -17,10 +18,13 @@
   "minute": "min",
   "second": "sec",
   "waitTime": "Ready",
+  "statusIdle": "Before Exercise",
   "statusReady": "Get Ready",
   "statusExercise": "Exercise",
   "statusRest": "Rest",
   "statusFinished": "Finished",
   "cancel": "Cancel",
-  "confirm": "OK"
+  "confirm": "OK",
+  "presetNameHint": "Enter preset name",
+  "currentPreset": "Current preset"
 }

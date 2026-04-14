@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../l10n/app_localizations.dart';
+import '../models/preset.dart';
+import '../services/preset_service.dart';
 
 enum TimerPhase { idle, ready, exercise, rest, finished }
 
@@ -13,7 +14,8 @@ class TimerScreen extends StatefulWidget {
   State<TimerScreen> createState() => _TimerScreenState();
 }
 
-class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin {
+class _TimerScreenState extends State<TimerScreen>
+    with TickerProviderStateMixin {
   // 설정값
   int _totalRounds = 12;
   int _exerciseMinutes = 3;
@@ -28,9 +30,20 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
   int _currentRound = 1;
   int _remainingSeconds = 0;
   Timer? _timer;
+  String _currentPresetName = Preset.defaultName;
+  Preset _loadedPreset = Preset.defaultPreset;
 
   // 애니메이션
   AnimationController? _animController;
+
+  bool get _isSettingChanged =>
+      _totalRounds != _loadedPreset.totalRounds ||
+      _waitMinutes != _loadedPreset.waitMinutes ||
+      _waitSeconds != _loadedPreset.waitSeconds ||
+      _exerciseMinutes != _loadedPreset.exerciseMinutes ||
+      _exerciseSeconds != _loadedPreset.exerciseSeconds ||
+      _restMinutes != _loadedPreset.restMinutes ||
+      _restSeconds != _loadedPreset.restSeconds;
 
   int get _exerciseTotalSeconds => _exerciseMinutes * 60 + _exerciseSeconds;
   int get _restTotalSeconds => _restMinutes * 60 + _restSeconds;
@@ -60,7 +73,8 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
     return '$min:$sec';
   }
 
-  bool get _isRunning => _phase != TimerPhase.idle && _phase != TimerPhase.finished;
+  bool get _isRunning =>
+      _phase != TimerPhase.idle && _phase != TimerPhase.finished;
 
   double get _smoothProgress {
     if (_phase == TimerPhase.idle || _phase == TimerPhase.finished) return 0.0;
@@ -73,12 +87,11 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
 
   void _startAnimationCycle() {
     _animController?.dispose();
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 1),
-    )..addListener(() {
-        setState(() {});
-      });
+    _animController =
+        AnimationController(vsync: this, duration: const Duration(seconds: 1))
+          ..addListener(() {
+            setState(() {});
+          });
     _animController!.forward(from: 0.0);
   }
 
@@ -161,6 +174,21 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
   }
 
   @override
+  void initState() {
+    super.initState();
+    final preset = PresetService.loadLastPreset();
+    _currentPresetName = preset.name;
+    _loadedPreset = preset;
+    _totalRounds = preset.totalRounds;
+    _waitMinutes = preset.waitMinutes;
+    _waitSeconds = preset.waitSeconds;
+    _exerciseMinutes = preset.exerciseMinutes;
+    _exerciseSeconds = preset.exerciseSeconds;
+    _restMinutes = preset.restMinutes;
+    _restSeconds = preset.restSeconds;
+  }
+
+  @override
   void dispose() {
     _timer?.cancel();
     _animController?.dispose();
@@ -170,7 +198,7 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
   String _statusText(AppLocalizations l10n) {
     switch (_phase) {
       case TimerPhase.idle:
-        return '';
+        return l10n.statusIdle;
       case TimerPhase.ready:
         return l10n.statusReady;
       case TimerPhase.exercise:
@@ -197,96 +225,263 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
     }
   }
 
+  Future<void> _saveCurrentPreset() async {
+    final updated = Preset(
+      name: _currentPresetName,
+      totalRounds: _totalRounds,
+      waitMinutes: _waitMinutes,
+      waitSeconds: _waitSeconds,
+      exerciseMinutes: _exerciseMinutes,
+      exerciseSeconds: _exerciseSeconds,
+      restMinutes: _restMinutes,
+      restSeconds: _restSeconds,
+    );
+    await PresetService.save(updated);
+    await PresetService.saveLastPresetName(updated.name);
+    setState(() => _loadedPreset = updated);
+  }
+
+  void _showSavePresetDialog() {
+    final l10n = AppLocalizations.of(context)!;
+    final nameController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.savePreset),
+        content: TextField(
+          controller: nameController,
+          decoration: InputDecoration(
+            hintText: l10n.presetNameHint,
+            border: const OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final name = nameController.text.trim();
+              if (name.isEmpty) return;
+              final newPreset = Preset.defaultPreset.copyWith(name: name);
+              await PresetService.save(newPreset);
+              await PresetService.saveLastPresetName(name);
+              setState(() {
+                _currentPresetName = name;
+                _loadedPreset = newPreset;
+              });
+              if (context.mounted) Navigator.pop(context);
+            },
+            child: Text(l10n.confirm),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLoadPresetDialog() {
+    final l10n = AppLocalizations.of(context)!;
+    final presets = PresetService.getAll();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.loadPreset),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: presets.length,
+            itemBuilder: (context, index) {
+              final preset = presets[index];
+              return ListTile(
+                title: Text(preset.name),
+                subtitle: Text(
+                  '${preset.totalRounds}R  ${preset.exerciseMinutes}:${preset.exerciseSeconds.toString().padLeft(2, '0')} / ${preset.restMinutes}:${preset.restSeconds.toString().padLeft(2, '0')}',
+                ),
+                trailing: (preset.isDefault || preset.name == _currentPresetName)
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: () async {
+                          await PresetService.delete(preset.name);
+                          if (context.mounted) Navigator.pop(context);
+                        },
+                      ),
+                onTap: () {
+                  PresetService.saveLastPresetName(preset.name);
+                  setState(() {
+                    _currentPresetName = preset.name;
+                    _loadedPreset = preset;
+                    _totalRounds = preset.totalRounds;
+                    _waitMinutes = preset.waitMinutes;
+                    _waitSeconds = preset.waitSeconds;
+                    _exerciseMinutes = preset.exerciseMinutes;
+                    _exerciseSeconds = preset.exerciseSeconds;
+                    _restMinutes = preset.restMinutes;
+                    _restSeconds = preset.restSeconds;
+                  });
+                  _resetTimer();
+                  Navigator.pop(context);
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.cancel),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showTimerSettingDialog() {
     final l10n = AppLocalizations.of(context)!;
 
-    final roundController = TextEditingController(text: '$_totalRounds');
-    final waitMinController = TextEditingController(text: '$_waitMinutes');
-    final waitSecController = TextEditingController(text: '$_waitSeconds');
-    final exMinController = TextEditingController(text: '$_exerciseMinutes');
-    final exSecController = TextEditingController(text: '$_exerciseSeconds');
-    final restMinController = TextEditingController(text: '$_restMinutes');
-    final restSecController = TextEditingController(text: '$_restSeconds');
+    int tempRounds = _totalRounds;
+    int tempWaitMin = _waitMinutes;
+    int tempWaitSec = _waitSeconds;
+    int tempExMin = _exerciseMinutes;
+    int tempExSec = _exerciseSeconds;
+    int tempRestMin = _restMinutes;
+    int tempRestSec = _restSeconds;
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text(l10n.timerSetting),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildSettingRow(
-                label: l10n.roundLabel,
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(l10n.timerSetting),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildNumberField(roundController, width: 60),
+                  _buildSettingRow(
+                    label: l10n.roundLabel,
+                    children: [
+                      _buildDropdown(
+                        value: tempRounds,
+                        items: List.generate(30, (i) => i + 1),
+                        onChanged: (v) => setDialogState(() => tempRounds = v!),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _buildSettingRow(
+                    label: l10n.waitTime,
+                    children: [
+                      _buildDropdown(
+                        value: tempWaitMin,
+                        items: List.generate(60, (i) => i),
+                        onChanged: (v) =>
+                            setDialogState(() => tempWaitMin = v!),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(l10n.minute),
+                      const SizedBox(width: 12),
+                      _buildDropdown(
+                        value: tempWaitSec,
+                        items: List.generate(60, (i) => i),
+                        onChanged: (v) =>
+                            setDialogState(() => tempWaitSec = v!),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(l10n.second),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _buildSettingRow(
+                    label: l10n.exerciseTime,
+                    children: [
+                      _buildDropdown(
+                        value: tempExMin,
+                        items: List.generate(60, (i) => i),
+                        onChanged: (v) => setDialogState(() => tempExMin = v!),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(l10n.minute),
+                      const SizedBox(width: 12),
+                      _buildDropdown(
+                        value: tempExSec,
+                        items: List.generate(60, (i) => i),
+                        onChanged: (v) => setDialogState(() => tempExSec = v!),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(l10n.second),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _buildSettingRow(
+                    label: l10n.restTime,
+                    children: [
+                      _buildDropdown(
+                        value: tempRestMin,
+                        items: List.generate(60, (i) => i),
+                        onChanged: (v) =>
+                            setDialogState(() => tempRestMin = v!),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(l10n.minute),
+                      const SizedBox(width: 12),
+                      _buildDropdown(
+                        value: tempRestSec,
+                        items: List.generate(60, (i) => i),
+                        onChanged: (v) =>
+                            setDialogState(() => tempRestSec = v!),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(l10n.second),
+                    ],
+                  ),
                 ],
               ),
-              const SizedBox(height: 16),
-              _buildSettingRow(
-                label: l10n.waitTime,
-                children: [
-                  Text(l10n.minute),
-                  const SizedBox(width: 4),
-                  _buildNumberField(waitMinController, width: 50),
-                  const SizedBox(width: 12),
-                  Text(l10n.second),
-                  const SizedBox(width: 4),
-                  _buildNumberField(waitSecController, width: 50),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _buildSettingRow(
-                label: l10n.exerciseTime,
-                children: [
-                  Text(l10n.minute),
-                  const SizedBox(width: 4),
-                  _buildNumberField(exMinController, width: 50),
-                  const SizedBox(width: 12),
-                  Text(l10n.second),
-                  const SizedBox(width: 4),
-                  _buildNumberField(exSecController, width: 50),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _buildSettingRow(
-                label: l10n.restTime,
-                children: [
-                  Text(l10n.minute),
-                  const SizedBox(width: 4),
-                  _buildNumberField(restMinController, width: 50),
-                  const SizedBox(width: 12),
-                  Text(l10n.second),
-                  const SizedBox(width: 4),
-                  _buildNumberField(restSecController, width: 50),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.cancel),
-            ),
-            FilledButton(
-              onPressed: () {
-                setState(() {
-                  _totalRounds = int.tryParse(roundController.text) ?? _totalRounds;
-                  _waitMinutes = int.tryParse(waitMinController.text) ?? _waitMinutes;
-                  _waitSeconds = int.tryParse(waitSecController.text) ?? _waitSeconds;
-                  _exerciseMinutes = int.tryParse(exMinController.text) ?? _exerciseMinutes;
-                  _exerciseSeconds = int.tryParse(exSecController.text) ?? _exerciseSeconds;
-                  _restMinutes = int.tryParse(restMinController.text) ?? _restMinutes;
-                  _restSeconds = int.tryParse(restSecController.text) ?? _restSeconds;
-                });
-                _resetTimer();
-                Navigator.pop(context);
-              },
-              child: Text(l10n.confirm),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(l10n.cancel),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    setState(() {
+                      _totalRounds = tempRounds;
+                      _waitMinutes = tempWaitMin;
+                      _waitSeconds = tempWaitSec;
+                      _exerciseMinutes = tempExMin;
+                      _exerciseSeconds = tempExSec;
+                      _restMinutes = tempRestMin;
+                      _restSeconds = tempRestSec;
+                    });
+                    _resetTimer();
+                    Navigator.pop(context);
+                  },
+                  child: Text(l10n.confirm),
+                ),
+              ],
+            );
+          },
         );
       },
+    );
+  }
+
+  Widget _buildDropdown({
+    required int value,
+    required List<int> items,
+    required ValueChanged<int?> onChanged,
+  }) {
+    return DropdownButton<int>(
+      value: value,
+      isDense: true,
+      items: items
+          .map((i) => DropdownMenuItem(value: i, child: Text('$i')))
+          .toList(),
+      onChanged: onChanged,
     );
   }
 
@@ -298,30 +493,10 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
       children: [
         SizedBox(
           width: 80,
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
+          child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
         ),
         ...children,
       ],
-    );
-  }
-
-  Widget _buildNumberField(TextEditingController controller, {required double width}) {
-    return SizedBox(
-      width: width,
-      child: TextField(
-        controller: controller,
-        keyboardType: TextInputType.number,
-        textAlign: TextAlign.center,
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        decoration: const InputDecoration(
-          isDense: true,
-          contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-          border: OutlineInputBorder(),
-        ),
-      ),
     );
   }
 
@@ -330,24 +505,33 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
     final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
     final screenWidth = MediaQuery.of(context).size.width;
-    final timerSize = screenWidth * 0.65;
+    final screenHeight = MediaQuery.of(context).size.height;
     final phaseColor = _phaseColor(colorScheme);
-    final isPaused = _phase != TimerPhase.idle && _phase != TimerPhase.finished && _timer == null;
+    final isPaused =
+        _phase != TimerPhase.idle &&
+        _phase != TimerPhase.finished &&
+        _timer == null;
+
+    // 고정 UI 영역 높이: 상단 여백 + 라운드텍스트 + 간격 + 리셋버튼 + 하단버튼3개 + 여백
+    const fixedVerticalSpace =
+        24.0 + 32.0 + 24.0 + 48.0 + (52.0 * 3) + (12.0 * 2) + 32.0;
+    final availableHeight = screenHeight - fixedVerticalSpace;
+    final timerSize = (screenWidth * 0.9).clamp(0.0, availableHeight * 0.85);
 
     return SafeArea(
       child: Column(
         children: [
-          const SizedBox(height: 40),
+          const SizedBox(height: 24),
 
           // 라운드 표시
           Text(
             '$_currentRound / $_totalRounds ${l10n.round}',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: colorScheme.onSurface,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(color: colorScheme.onSurface),
           ),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
 
           // 원형 타이머
           SizedBox(
@@ -358,29 +542,28 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
                 progress: _smoothProgress.clamp(0.0, 1.0),
                 progressColor: phaseColor,
                 backgroundColor: colorScheme.surfaceContainerHighest,
-                strokeWidth: 6,
+                strokeWidth: 8,
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // 상태 표시
-                  if (_phase != TimerPhase.idle)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Text(
-                        _statusText(l10n),
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: phaseColor,
-                          fontWeight: FontWeight.bold,
-                        ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      _statusText(l10n),
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: phaseColor,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
+                  ),
 
                   // 시간 표시
                   Text(
                     _displayTime,
                     style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                      fontSize: timerSize * 0.2,
+                      fontSize: timerSize * 0.22,
                       color: colorScheme.onSurface,
                     ),
                   ),
@@ -389,19 +572,21 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
 
                   // 시작/일시정지 버튼
                   if (_phase != TimerPhase.finished)
-                    FilledButton.icon(
-                      onPressed: _toggleTimer,
-                      icon: Icon(
-                        _isRunning && _timer != null ? Icons.pause : Icons.play_arrow,
-                      ),
-                      label: Text(
-                        _isRunning && _timer != null ? l10n.pause : l10n.start,
-                      ),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: isPaused ? Colors.orange : null,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
+                    GestureDetector(
+                      onTap: _toggleTimer,
+                      child: Container(
+                        width: timerSize * 0.22,
+                        height: timerSize * 0.22,
+                        decoration: BoxDecoration(
+                          color: isPaused ? Colors.orange : colorScheme.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          _isRunning && _timer != null
+                              ? Icons.pause
+                              : Icons.play_arrow,
+                          color: colorScheme.onPrimary,
+                          size: timerSize * 0.12,
                         ),
                       ),
                     ),
@@ -409,8 +594,6 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
               ),
             ),
           ),
-
-          const SizedBox(height: 16),
 
           // 리셋 버튼
           TextButton.icon(
@@ -426,6 +609,14 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
             padding: const EdgeInsets.symmetric(horizontal: 32),
             child: Column(
               children: [
+                // 현재 프리셋 표시
+                Text(
+                  '${AppLocalizations.of(context)!.currentPreset}: $_currentPresetName',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
@@ -440,7 +631,9 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
-                    onPressed: _isRunning ? null : () {},
+                    onPressed: (!_isRunning && _isSettingChanged)
+                        ? _saveCurrentPreset
+                        : null,
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
@@ -451,7 +644,18 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
-                    onPressed: _isRunning ? null : () {},
+                    onPressed: _isRunning ? null : _showSavePresetDialog,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: Text(l10n.addPreset),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: _isRunning ? null : _showLoadPresetDialog,
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),

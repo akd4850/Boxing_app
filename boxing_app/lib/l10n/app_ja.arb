@@ -26,5 +26,18 @@
   "cancel": "キャンセル",
   "confirm": "確認",
   "presetNameHint": "プリセット名を入力",
-  "currentPreset": "現在のプリセット"
+  "currentPreset": "現在のプリセット",
+  "save": "保存",
+  "roundCount": "ラウンド数",
+  "memo": "メモ",
+  "memoHint": "メモを入力",
+  "activityShadow": "シャドーボクシング",
+  "activityBag": "サンドバッグ",
+  "activityMitts": "ミット",
+  "activitySparring": "スパーリング",
+  "activitySpeedBag": "スピードバッグ",
+  "activityJumpRope": "縄跳び",
+  "activityRest": "休憩",
+  "activityOther": "その他",
+  "savedSuccess": "保存しました"
 }

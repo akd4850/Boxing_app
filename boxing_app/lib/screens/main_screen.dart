@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/common_bottom_nav.dart';
 import 'home_screen.dart';
+import 'record_screen.dart';
 import 'timer_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -17,7 +18,7 @@ class _MainScreenState extends State<MainScreen> {
   final List<Widget> _screens = const [
     HomeScreen(),
     TimerScreen(),
-    Center(child: Text('기록', style: TextStyle(fontSize: 24))),
+    RecordScreen(),
     Center(child: Text('설정', style: TextStyle(fontSize: 24))),
   ];
 

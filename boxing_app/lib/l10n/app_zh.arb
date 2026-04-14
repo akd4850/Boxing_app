@@ -26,5 +26,18 @@
   "cancel": "取消",
   "confirm": "确认",
   "presetNameHint": "输入预设名称",
-  "currentPreset": "当前预设"
+  "currentPreset": "当前预设",
+  "save": "保存",
+  "roundCount": "回合数",
+  "memo": "备注",
+  "memoHint": "添加备注",
+  "activityShadow": "影子拳击",
+  "activityBag": "沙袋",
+  "activityMitts": "打靶",
+  "activitySparring": "对打",
+  "activitySpeedBag": "速度袋",
+  "activityJumpRope": "跳绳",
+  "activityRest": "休息",
+  "activityOther": "其他",
+  "savedSuccess": "已保存"
 }

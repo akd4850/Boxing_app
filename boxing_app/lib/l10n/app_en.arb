@@ -26,5 +26,18 @@
   "cancel": "Cancel",
   "confirm": "OK",
   "presetNameHint": "Enter preset name",
-  "currentPreset": "Current preset"
+  "currentPreset": "Current preset",
+  "save": "Save",
+  "roundCount": "Rounds",
+  "memo": "Memo",
+  "memoHint": "Add a note...",
+  "activityShadow": "Shadow Boxing",
+  "activityBag": "Heavy Bag",
+  "activityMitts": "Mitts",
+  "activitySparring": "Sparring",
+  "activitySpeedBag": "Speed Bag",
+  "activityJumpRope": "Jump Rope",
+  "activityRest": "Rest",
+  "activityOther": "Other",
+  "savedSuccess": "Saved"
 }

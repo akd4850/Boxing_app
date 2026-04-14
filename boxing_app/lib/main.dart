@@ -4,11 +4,13 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/main_screen.dart';
 import 'services/preset_service.dart';
+import 'services/workout_record_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   await PresetService.init();
+  await WorkoutRecordService.init();
   runApp(const BoxingApp());
 }
 

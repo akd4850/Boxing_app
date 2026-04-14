@@ -26,5 +26,18 @@
   "cancel": "취소",
   "confirm": "확인",
   "presetNameHint": "프리셋 이름 입력",
-  "currentPreset": "현재 프리셋"
+  "currentPreset": "현재 프리셋",
+  "save": "저장",
+  "roundCount": "라운드 수",
+  "memo": "메모",
+  "memoHint": "메모를 입력하세요",
+  "activityShadow": "쉐도우복싱",
+  "activityBag": "샌드백",
+  "activityMitts": "미트",
+  "activitySparring": "스파링",
+  "activitySpeedBag": "스피드백",
+  "activityJumpRope": "줄넘기",
+  "activityRest": "휴식",
+  "activityOther": "기타",
+  "savedSuccess": "저장됐습니다"
 }
